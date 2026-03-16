@@ -8,6 +8,11 @@ interface Laboratorio {
   codigo: string;
 }
 
+const ACTIVIDADES = ["Cultivo celular"];
+const GRUPOS = ["GI2B", "BioMed"];
+const INSTITUCIONES = ["ITM", "UDEA", "UNAL"];
+const RECURSOS = ["Cabina 1", "Cabina 2"];
+
 export default function RegistroPage({ params }: { params: Promise<{ labCode: string }> }) {
   const [labCode, setLabCode] = useState<string>("");
   const [lab, setLab] = useState<Laboratorio | null>(null);
@@ -30,10 +35,18 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
     institucionesAsociadas: "",
     horaIngreso: horaActual,
     horaSalida: "",
-    recursosUsados: "",
+    recursosUsados: [] as string[],
     numAsistentes: "1",
     confirmacionFirma: false,
   });
+
+  // "Otro" text states
+  const [actividadOtra, setActividadOtra] = useState("");
+  const [actividadEsOtra, setActividadEsOtra] = useState(false);
+  const [grupoOtro, setGrupoOtro] = useState("");
+  const [grupoEsOtro, setGrupoEsOtro] = useState(false);
+  const [institucionOtra, setInstitucionOtra] = useState("");
+  const [institucionEsOtra, setInstitucionEsOtra] = useState(false);
 
   useEffect(() => {
     params.then((p) => setLabCode(p.labCode));
@@ -57,6 +70,49 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
     setForm((prev) => ({ ...prev, [target.name]: value }));
   };
 
+  const handleActividadSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "__otro__") {
+      setActividadEsOtra(true);
+      setForm((prev) => ({ ...prev, actividad: actividadOtra }));
+    } else {
+      setActividadEsOtra(false);
+      setForm((prev) => ({ ...prev, actividad: val }));
+    }
+  };
+
+  const handleGrupoSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "__otro__") {
+      setGrupoEsOtro(true);
+      setForm((prev) => ({ ...prev, grupoInvestigacion: grupoOtro }));
+    } else {
+      setGrupoEsOtro(false);
+      setForm((prev) => ({ ...prev, grupoInvestigacion: val }));
+    }
+  };
+
+  const handleInstitucionSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "__otro__") {
+      setInstitucionEsOtra(true);
+      setForm((prev) => ({ ...prev, institucionesAsociadas: institucionOtra }));
+    } else {
+      setInstitucionEsOtra(false);
+      setForm((prev) => ({ ...prev, institucionesAsociadas: val }));
+    }
+  };
+
+  const handleRecursoToggle = (recurso: string) => {
+    setForm((prev) => {
+      const current = prev.recursosUsados;
+      const updated = current.includes(recurso)
+        ? current.filter((r) => r !== recurso)
+        : [...current, recurso];
+      return { ...prev, recursosUsados: updated };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.confirmacionFirma) {
@@ -69,7 +125,7 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
     const res = await fetch("/api/registros", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, laboratorioId: lab!.id, numAsistentes: Number(form.numAsistentes) }),
+      body: JSON.stringify({ ...form, laboratorioId: lab!.id, numAsistentes: Number(form.numAsistentes), recursosUsados: form.recursosUsados.join(", ") }),
     });
 
     if (res.ok) {
@@ -114,7 +170,13 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
           <p className="text-slate-500 text-sm mb-1">Tu ingreso al laboratorio ha sido registrado.</p>
           <p className="text-slate-400 text-xs">{lab.nombre}</p>
           <button
-            onClick={() => { setEnviado(false); setForm((f) => ({ ...f, nombreInvestigador: "", actividad: "", grupoInvestigacion: "", codigoProyecto: "", nombreProyecto: "", institucionesAsociadas: "", horaSalida: "", recursosUsados: "", confirmacionFirma: false })); }}
+            onClick={() => {
+              setEnviado(false);
+              setActividadEsOtra(false); setActividadOtra("");
+              setGrupoEsOtro(false); setGrupoOtro("");
+              setInstitucionEsOtra(false); setInstitucionOtra("");
+              setForm((f) => ({ ...f, nombreInvestigador: "", actividad: "", grupoInvestigacion: "", codigoProyecto: "", nombreProyecto: "", institucionesAsociadas: "", horaSalida: "", recursosUsados: [], confirmacionFirma: false }));
+            }}
             className="mt-6 text-sm text-blue-600 hover:underline"
           >
             Registrar otra persona
@@ -147,8 +209,9 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
           {/* Fila fecha + horas */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha *</label>
+              <label htmlFor="fecha" className="block text-xs font-semibold text-slate-600 mb-1">Fecha *</label>
               <input
+                id="fecha"
                 type="date"
                 name="fecha"
                 value={form.fecha}
@@ -158,8 +221,9 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Hora ingreso *</label>
+              <label htmlFor="horaIngreso" className="block text-xs font-semibold text-slate-600 mb-1">Hora ingreso *</label>
               <input
+                id="horaIngreso"
                 type="time"
                 name="horaIngreso"
                 value={form.horaIngreso}
@@ -169,8 +233,9 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Hora salida</label>
+              <label htmlFor="horaSalida" className="block text-xs font-semibold text-slate-600 mb-1">Hora salida</label>
               <input
+                id="horaSalida"
                 type="time"
                 name="horaSalida"
                 value={form.horaSalida}
@@ -182,8 +247,9 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
 
           {/* Nombre investigador */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Nombre del investigador *</label>
+            <label htmlFor="nombreInvestigador" className="block text-xs font-semibold text-slate-600 mb-1">Nombre del investigador *</label>
             <input
+              id="nombreInvestigador"
               type="text"
               name="nombreInvestigador"
               value={form.nombreInvestigador}
@@ -196,34 +262,58 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
 
           {/* Actividad */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Actividad *</label>
-            <input
-              type="text"
-              name="actividad"
-              value={form.actividad}
-              onChange={handleChange}
-              required
-              placeholder="Describe la actividad a realizar"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label htmlFor="actividadSelect" className="block text-xs font-semibold text-slate-600 mb-1">Actividad *</label>
+            <select
+              id="actividadSelect"
+              value={actividadEsOtra ? "__otro__" : form.actividad}
+              onChange={handleActividadSelect}
+              required={!actividadEsOtra}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">Selecciona una actividad...</option>
+              {ACTIVIDADES.map((a) => <option key={a} value={a}>{a}</option>)}
+              <option value="__otro__">Otro: ¿Cuál?</option>
+            </select>
+            {actividadEsOtra && (
+              <input
+                type="text"
+                value={actividadOtra}
+                onChange={(e) => { setActividadOtra(e.target.value); setForm((prev) => ({ ...prev, actividad: e.target.value })); }}
+                required
+                placeholder="Describe la actividad"
+                className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
           </div>
 
           {/* Grupo + Código proyecto */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Grupo de investigación</label>
-              <input
-                type="text"
-                name="grupoInvestigacion"
-                value={form.grupoInvestigacion}
-                onChange={handleChange}
-                placeholder="Nombre del grupo"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label htmlFor="grupoSelect" className="block text-xs font-semibold text-slate-600 mb-1">Grupo de investigación</label>
+              <select
+                id="grupoSelect"
+                value={grupoEsOtro ? "__otro__" : form.grupoInvestigacion}
+                onChange={handleGrupoSelect}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="">Selecciona un grupo...</option>
+                {GRUPOS.map((g) => <option key={g} value={g}>{g}</option>)}
+                <option value="__otro__">Otro</option>
+              </select>
+              {grupoEsOtro && (
+                <input
+                  type="text"
+                  value={grupoOtro}
+                  onChange={(e) => { setGrupoOtro(e.target.value); setForm((prev) => ({ ...prev, grupoInvestigacion: e.target.value })); }}
+                  placeholder="Nombre del grupo"
+                  className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Código del proyecto</label>
+              <label htmlFor="codigoProyecto" className="block text-xs font-semibold text-slate-600 mb-1">Código del proyecto</label>
               <input
+                id="codigoProyecto"
                 type="text"
                 name="codigoProyecto"
                 value={form.codigoProyecto}
@@ -236,8 +326,9 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
 
           {/* Nombre del proyecto */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Nombre del proyecto</label>
+            <label htmlFor="nombreProyecto" className="block text-xs font-semibold text-slate-600 mb-1">Nombre del proyecto</label>
             <input
+              id="nombreProyecto"
               type="text"
               name="nombreProyecto"
               value={form.nombreProyecto}
@@ -249,33 +340,53 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
 
           {/* Instituciones asociadas */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Instituciones asociadas al proyecto</label>
-            <input
-              type="text"
-              name="institucionesAsociadas"
-              value={form.institucionesAsociadas}
-              onChange={handleChange}
-              placeholder="Instituciones participantes"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label htmlFor="institucionSelect" className="block text-xs font-semibold text-slate-600 mb-1">Instituciones asociadas al proyecto</label>
+            <select
+              id="institucionSelect"
+              value={institucionEsOtra ? "__otro__" : form.institucionesAsociadas}
+              onChange={handleInstitucionSelect}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">Selecciona una institución...</option>
+              {INSTITUCIONES.map((i) => <option key={i} value={i}>{i}</option>)}
+              <option value="__otro__">Otro: ¿Cuál?</option>
+            </select>
+            {institucionEsOtra && (
+              <input
+                type="text"
+                value={institucionOtra}
+                onChange={(e) => { setInstitucionOtra(e.target.value); setForm((prev) => ({ ...prev, institucionesAsociadas: e.target.value })); }}
+                placeholder="Nombre de la institución"
+                className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
           </div>
 
           {/* Recursos usados + N° asistentes */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Recursos usados</label>
-              <input
-                type="text"
-                name="recursosUsados"
-                value={form.recursosUsados}
-                onChange={handleChange}
-                placeholder="Equipos, materiales, software..."
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <p className="text-xs font-semibold text-slate-600 mb-2">Recursos usados</p>
+              <div className="flex flex-wrap gap-2">
+                {RECURSOS.map((recurso) => (
+                  <button
+                    key={recurso}
+                    type="button"
+                    onClick={() => handleRecursoToggle(recurso)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                      form.recursosUsados.includes(recurso)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-slate-600 border-slate-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {recurso}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">N° asistentes</label>
+              <label htmlFor="numAsistentes" className="block text-xs font-semibold text-slate-600 mb-1">N° asistentes</label>
               <input
+                id="numAsistentes"
                 type="number"
                 name="numAsistentes"
                 value={form.numAsistentes}
