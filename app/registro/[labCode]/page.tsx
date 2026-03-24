@@ -35,6 +35,30 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
     confirmacionFirma: false,
   });
 
+  const RECURSOS_OPCIONES = ["Cabina 1", "Cabina 2"];
+  const [recursosSeleccionados, setRecursosSeleccionados] = useState<string[]>([]);
+  const [otroRecurso, setOtroRecurso] = useState("");
+
+  const toggleRecurso = (recurso: string) => {
+    setRecursosSeleccionados((prev) => {
+      const next = prev.includes(recurso) ? prev.filter((r) => r !== recurso) : [...prev, recurso];
+      actualizarRecursosUsados(next, otroRecurso);
+      return next;
+    });
+  };
+
+  const actualizarRecursosUsados = (seleccionados: string[], otro: string) => {
+    const partes = [...seleccionados];
+    if (otro.trim()) partes.push(otro.trim());
+    setForm((prev) => ({ ...prev, recursosUsados: partes.join(", ") }));
+  };
+
+  const handleOtroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setOtroRecurso(val);
+    actualizarRecursosUsados(recursosSeleccionados, val);
+  };
+
   useEffect(() => {
     params.then((p) => setLabCode(p.labCode));
   }, [params]);
@@ -263,15 +287,52 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
           {/* Recursos usados + N° asistentes */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Recursos usados</label>
-              <input
-                type="text"
-                name="recursosUsados"
-                value={form.recursosUsados}
-                onChange={handleChange}
-                placeholder="Equipos, materiales, software..."
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Recursos usados</label>
+              <div className="flex flex-wrap gap-2">
+                {RECURSOS_OPCIONES.map((recurso) => (
+                  <button
+                    key={recurso}
+                    type="button"
+                    onClick={() => toggleRecurso(recurso)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                      recursosSeleccionados.includes(recurso)
+                        ? "bg-blue-700 text-white border-blue-700"
+                        : "bg-white text-slate-700 border-slate-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {recurso}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (recursosSeleccionados.includes("__otro__")) {
+                      const next = recursosSeleccionados.filter((r) => r !== "__otro__");
+                      setRecursosSeleccionados(next);
+                      setOtroRecurso("");
+                      actualizarRecursosUsados(next, "");
+                    } else {
+                      setRecursosSeleccionados((prev) => [...prev, "__otro__"]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                    recursosSeleccionados.includes("__otro__")
+                      ? "bg-blue-700 text-white border-blue-700"
+                      : "bg-white text-slate-700 border-slate-300 hover:border-blue-400"
+                  }`}
+                >
+                  Otro
+                </button>
+              </div>
+              {recursosSeleccionados.includes("__otro__") && (
+                <input
+                  type="text"
+                  value={otroRecurso}
+                  onChange={handleOtroChange}
+                  placeholder="Describe el recurso..."
+                  className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">N° asistentes</label>
