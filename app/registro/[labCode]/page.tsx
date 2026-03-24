@@ -47,6 +47,7 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
   const [grupoEsOtro, setGrupoEsOtro] = useState(false);
   const [institucionOtra, setInstitucionOtra] = useState("");
   const [institucionEsOtra, setInstitucionEsOtra] = useState(false);
+  const [otroRecurso, setOtroRecurso] = useState("");
 
   useEffect(() => {
     params.then((p) => setLabCode(p.labCode));
@@ -125,7 +126,7 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
     const res = await fetch("/api/registros", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, laboratorioId: lab!.id, numAsistentes: Number(form.numAsistentes), recursosUsados: form.recursosUsados.join(", ") }),
+      body: JSON.stringify({ ...form, laboratorioId: lab!.id, numAsistentes: Number(form.numAsistentes), recursosUsados: form.recursosUsados.map((r) => r === "__otro__" ? otroRecurso : r).filter(Boolean).join(", ") }),
     });
 
     if (res.ok) {
@@ -174,7 +175,7 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
               setEnviado(false);
               setActividadEsOtra(false); setActividadOtra("");
               setGrupoEsOtro(false); setGrupoOtro("");
-              setInstitucionEsOtra(false); setInstitucionOtra("");
+              setInstitucionEsOtra(false); setInstitucionOtra(""); setOtroRecurso("");
               setForm((f) => ({ ...f, nombreInvestigador: "", actividad: "", grupoInvestigacion: "", codigoProyecto: "", nombreProyecto: "", institucionesAsociadas: "", horaSalida: "", recursosUsados: [], confirmacionFirma: false }));
             }}
             className="mt-6 text-sm text-blue-600 hover:underline"
@@ -381,7 +382,30 @@ export default function RegistroPage({ params }: { params: Promise<{ labCode: st
                     {recurso}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRecursoToggle("__otro__");
+                    if (form.recursosUsados.includes("__otro__")) setOtroRecurso("");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    form.recursosUsados.includes("__otro__")
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-slate-600 border-slate-300 hover:border-blue-400"
+                  }`}
+                >
+                  Otro
+                </button>
               </div>
+              {form.recursosUsados.includes("__otro__") && (
+                <input
+                  type="text"
+                  value={otroRecurso}
+                  onChange={(e) => setOtroRecurso(e.target.value)}
+                  placeholder="Describe el recurso..."
+                  className="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              )}
             </div>
             <div>
               <label htmlFor="numAsistentes" className="block text-xs font-semibold text-slate-600 mb-1">N° asistentes</label>
