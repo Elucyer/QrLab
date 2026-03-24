@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
 
   // Columna K
   ws.mergeCells("K7:K8");
-  styleHeader(ws.getCell("K7"), "Recuersos usados");
+  styleHeader(ws.getCell("K7"), "Recursos usados");
 
   // Columna L
   ws.mergeCells("L7:L8");
